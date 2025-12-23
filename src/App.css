@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@theme {
+  --color-rpg-gold: #ffcc00;
+  --color-rpg-blood: #990000;
+  
+  --font-pixel: "Press Start 2P", system-ui;
+}
