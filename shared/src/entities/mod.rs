@@ -15,5 +15,6 @@ pub mod user_skills;
 pub mod users;
 
 pub mod prelude {
+    pub use super::refresh_tokens::Entity as RefreshToken;
     pub use super::users::Entity as User;
 }

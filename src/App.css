@@ -1,5 +1,18 @@
 @import "tailwindcss";
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+input, textarea {
+  user-select: text; 
+}
+
 @theme {
   --color-rpg-gold: #ffcc00;
   --color-rpg-blood: #990000;

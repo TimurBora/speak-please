@@ -1,20 +1,44 @@
-// shared/src/models/user_dto.rs
+use sea_orm::sqlx::types::chrono;
 use serde::{Deserialize, Serialize};
+use specta::Type;
+use validator::Validate;
 
-#[derive(Deserialize)] // Для сервера: превратить JSON в структуру
-#[derive(Serialize)] // Для клиента: превратить структуру в JSON
+#[derive(Debug, Serialize, Deserialize, Validate, Type)]
 pub struct RegisterRequest {
+    #[validate(length(
+        min = 5,
+        max = 20,
+        message = "Username must be between 5 and 20 characters long",
+    ))]
     pub username: String,
+
+    #[validate(email(message = "Invalid email format"))]
     pub email: String,
+
+    #[validate(length(min = 8, message = "Password must be at least 8 characters long"))]
     pub password: String,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct UserResponse {
-    pub id: i32,
+#[derive(Debug, Serialize, Deserialize, Type)]
+pub struct RegisterResponse {
+    pub ulid: String,
     pub username: String,
-    pub level: i32,
-    // Пароль здесь НЕ НУЖЕН. Никогда не отправляй хеш пароля клиенту!
+    pub email: String,
+    pub created_at: chrono::DateTime<chrono::Utc>,
+    pub refresh_token: String,
 }
 
-// TODO: THINK ABOUT IT
+#[derive(Debug, Serialize, Deserialize, Validate, Type)]
+pub struct LoginRequest {
+    pub password: String,
+    #[validate(email(message = "Invalid email format"))]
+    pub email: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Type)]
+pub struct LoginResponse {
+    pub ulid: String,
+    pub username: String,
+    pub email: String,
+    pub refresh_token: String,
+}

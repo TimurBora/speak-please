@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri"
@@ -13,11 +13,13 @@
     "@tailwindcss/vite": "^4.1.18",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
-    "@tauri-apps/plugin-stronghold": "~2.3.1",
+    "@tauri-apps/plugin-store": "~2.4.1",
     "lucide-react": "^0.562.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwindcss": "^4.1.18"
+    "react-router-dom": "^7.11.0",
+    "tailwindcss": "^4.1.18",
+    "zustand": "^5.0.9"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2",

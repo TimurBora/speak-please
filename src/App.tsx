@@ -1,37 +1,68 @@
-import { useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import Register from './pages/registration';
+import Home from './pages/home';
+import { useEffect, ReactNode } from 'react';
+import { useAuthStore } from './stores/authStore';
+import Login from './pages/login';
 
-function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
+const AuthGuard = ({ children, requireAuth }: { children: ReactNode, requireAuth: boolean }) => {
+  const { checkSession, isAuthenticated, isLoading } = useAuthStore();
+  const location = useLocation();
 
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
+  useEffect(() => {
+    checkSession();
+  }, [location.pathname]);
+
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#05050a] flex items-center justify-center text-white">Loading...</div>;
   }
 
-  return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+  if (requireAuth && !isAuthenticated) {
+    return <Navigate to="/register" state={{ from: location }} replace />;
+  }
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
+  if (!requireAuth && isAuthenticated) {
+    return <Navigate to="/home" replace />;
+  }
+
+  return <>{children}</>;
+};
+
+function App() {
+  return (
+    <Router>
+      <Routes>
+        <Route
+          path="/register"
+          element={
+            <AuthGuard requireAuth={false}>
+              <Register />
+            </AuthGuard>
+          }
         />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+
+        <Route
+          path="/login"
+          element={
+            <AuthGuard requireAuth={false}>
+              <Login />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/home"
+          element={
+            <AuthGuard requireAuth={true}>
+              <Home />
+            </AuthGuard>
+          }
+        />
+
+        <Route path="/" element={<Navigate to="/home" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </Router>
   );
 }
 

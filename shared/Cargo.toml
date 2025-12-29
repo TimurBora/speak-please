@@ -3,6 +3,9 @@ name = "shared"
 version = "0.1.0"
 edition = "2024"
 
+[build-dependencies]
+dotenv = "0.15.0"
+
 [dependencies]
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -13,3 +16,19 @@ sea-orm = { version = "2.0.0-rc.22", features = [
 ] }
 tokio = { version = "1.47.2", features = ["full"] }
 anyhow = "1.0.100"
+validator = { version = "0.20", features = ["derive"] }
+jwt-simple = "0.12.13"
+specta = { version = "=2.0.0-rc.22", features = ["chrono", "derive"] }
+specta-typescript = "0.0.9"
+ulid = "1.2.1"
+chrono = "0.4.42"
+axum = "0.8.8"
+argon2 = { version = "0.6.0-rc.5", features = ["getrandom"] }
+password-hash = { version = "0.6.0-rc.6", features = ["rand_core"] }
+dotenvy_macro = "0.15.7"
+thiserror = "2.0.17"
+tracing = "0.1.44"
+reqwest = { version = "0.12", default-features = false, features = [
+  "json",
+  "rustls-tls",
+] }

@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+migration = { path = "../migration" }
 shared = { path = "../shared" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
@@ -11,9 +12,14 @@ sea-orm = { version = "2.0.0-rc.22", features = [
   "sqlx-sqlite",
   "runtime-tokio-rustls",
   "macros",
+
 ] }
 tokio = { version = "1.47.2", features = ["full"] }
-anyhow = "1.0.100"
 argon2 = { version = "0.6.0-rc.5", features = ["getrandom"] }
 password-hash = { version = "0.6.0-rc.6", features = ["rand_core"] }
 axum = "0.8.8"
+axum-extra = { version = "0.12.3", features = ["typed-header"] }
+jwt-simple = "0.12.13"
+dotenv = "0.15.0"
+ulid = "1.2.1"
+validator = { version = "0.20", features = ["derive"] }
