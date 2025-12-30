@@ -7,7 +7,7 @@ use crate::errors::jwt_errors::JwtError;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CustomClaims {
     pub user_id: String,
-    pub username: String,
+    pub email: String,
 }
 
 const JWT_SECRET_KEY: &str = dotenv!("JWT_SECRET_KEY");
@@ -16,9 +16,9 @@ fn jwt_key() -> HS256Key {
     HS256Key::from_bytes(JWT_SECRET_KEY.as_bytes())
 }
 
-pub fn create_access_token(user_id: String, username: String) -> Result<String, JwtError> {
+pub fn create_access_token(user_id: String, email: String) -> Result<String, JwtError> {
     let claims = Claims::with_custom_claims(
-        CustomClaims { user_id, username },
+        CustomClaims { user_id, email },
         Duration::from_secs(15 * 60),
     );
 

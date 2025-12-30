@@ -6,7 +6,7 @@ use ulid::Ulid;
 #[sea_orm(table_name = "users")]
 pub struct Model {
     #[sea_orm(primary_key)]
-    pub ulid: String, // ULID
+    pub ulid: String,
     #[sea_orm(unique)]
     pub username: String,
     #[sea_orm(unique)]

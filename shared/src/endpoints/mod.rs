@@ -4,8 +4,8 @@ pub trait API {
     fn format_with_api_url(&self, api_url: &str) -> String {
         format!("{}{}", api_url, self.path())
     }
+    fn is_auth_endpoint(&self) -> bool;
 }
 
 pub mod refresh_token_endpoints;
 pub mod user_endpoints;
-

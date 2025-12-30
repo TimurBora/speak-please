@@ -11,7 +11,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Users::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(Users::Ulid).string().primary_key())
+                    .col(ColumnDef::new(Users::Ulid).string_len(26).primary_key())
                     .col(
                         ColumnDef::new(Users::Username)
                             .string()
@@ -54,8 +54,16 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(RefreshTokens::Table)
                     .if_not_exists()
-                    .col(ColumnDef::new(RefreshTokens::Ulid).string().primary_key())
-                    .col(ColumnDef::new(RefreshTokens::UserId).string().not_null())
+                    .col(
+                        ColumnDef::new(RefreshTokens::Ulid)
+                            .string_len(26)
+                            .primary_key(),
+                    )
+                    .col(
+                        ColumnDef::new(RefreshTokens::UserId)
+                            .string_len(26)
+                            .not_null(),
+                    )
                     .col(
                         ColumnDef::new(RefreshTokens::TokenHash)
                             .string()
@@ -67,7 +75,6 @@ impl MigrationTrait for Migration {
                             .date_time()
                             .not_null(),
                     )
-                    // Устанавливаем связь (Foreign Key)
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-refresh_token-user_id")
@@ -77,21 +84,55 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(DailyQuests::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(DailyQuests::Ulid)
+                            .string_len(26)
+                            .primary_key(),
+                    )
+                    .col(ColumnDef::new(DailyQuests::Title).string().not_null())
+                    .col(ColumnDef::new(DailyQuests::Description).string())
+                    .col(
+                        ColumnDef::new(DailyQuests::Complexity)
+                            .char_len(1)
+                            .not_null(),
+                    )
+                    .col(ColumnDef::new(DailyQuests::XpReward).integer().not_null())
+                    .col(ColumnDef::new(DailyQuests::ActionType).string().not_null())
+                    .col(
+                        ColumnDef::new(DailyQuests::ValidationType)
+                            .string()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(DailyQuests::TargetValue)
+                            .integer()
+                            .not_null(),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // Удаляем в обратном порядке из-за связей
         manager
             .drop_table(Table::drop().table(RefreshTokens::Table).to_owned())
             .await?;
         manager
             .drop_table(Table::drop().table(Users::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(DailyQuests::Table).to_owned())
             .await
     }
 }
 
-// Описываем идентификаторы для типов (Iden)
 #[derive(DeriveIden)]
 enum Users {
     Table,
@@ -113,4 +154,17 @@ enum RefreshTokens {
     UserId,
     TokenHash,
     ExpiresAt,
+}
+
+#[derive(DeriveIden)]
+enum DailyQuests {
+    Table,
+    Ulid,
+    Title,
+    Description,
+    Complexity,
+    XpReward,
+    ActionType,
+    ValidationType,
+    TargetValue,
 }

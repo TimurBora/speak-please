@@ -21,6 +21,7 @@ pub fn public_user_router() -> Router<AppState> {
         .route(UserEndpoints::LoginUserEndpoint.template(), post(login))
 }
 
+#[tracing::instrument(skip(state))]
 async fn register(
     State(state): State<AppState>,
     Json(payload): Json<RegisterRequest>,
@@ -52,6 +53,7 @@ async fn register(
     Ok(Json(response))
 }
 
+#[tracing::instrument(skip(state))]
 async fn login(
     State(state): State<AppState>,
     Json(payload): Json<LoginRequest>,
@@ -60,7 +62,7 @@ async fn login(
         .validate()
         .map_err(|e| AuthError::ValidationError(e.to_string()))?;
 
-    let user_model = UserService::login_by_username_and_password(
+    let user_model = UserService::login_by_email_and_password(
         &state.connection,
         &payload.email,
         &payload.password,

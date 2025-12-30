@@ -19,4 +19,8 @@ impl API for UserEndpoints {
             Self::LoginUserEndpoint => "/login",
         }
     }
+
+    fn is_auth_endpoint(&self) -> bool {
+        true
+    }
 }

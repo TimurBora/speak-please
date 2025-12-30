@@ -1,8 +1,11 @@
 use axum::Router;
 use migration::{Migrator, MigratorTrait};
-use sea_orm::{Database, DatabaseConnection};
+use sea_orm::{ConnectOptions, Database, DatabaseConnection};
 use std::net::SocketAddr;
 use tokio::net::TcpListener;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
+use tracing::Level;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::routes::{refresh_token_routes::refresh_token_router, user_routes::public_user_router};
 
@@ -17,12 +20,30 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
-    dotenv::dotenv().unwrap();
+    dotenv::dotenv().ok();
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                "server=debug,tower_http=debug,axum::rejection=trace,sea_orm=debug".into()
+            }),
+        )
+        .with(
+            tracing_subscriber::fmt::layer()
+                .pretty()
+                .with_target(false)
+                .with_file(false)
+                .with_line_number(false),
+        ) // Делает вывод многострочным и понятным
+        .init();
 
     let db_url = "sqlite://../database.db?mode=rwc";
-    let connection = Database::connect(db_url)
+    let mut opt = ConnectOptions::new(db_url);
+    opt.sqlx_logging(false);
+    let connection = Database::connect(opt)
         .await
         .expect("Не удалось подключиться к БД");
+
     Migrator::up(&connection, None)
         .await
         .expect("Migration failed");
@@ -39,11 +60,24 @@ async fn main() -> Result<(), ()> {
 
     let app = Router::new()
         .merge(public_routes)
+        .layer(
+            TraceLayer::new_for_http()
+                .make_span_with(
+                    DefaultMakeSpan::new()
+                        .level(Level::INFO)
+                        .include_headers(true),
+                )
+                .on_response(
+                    DefaultOnResponse::new()
+                        .level(Level::INFO)
+                        .latency_unit(tower_http::LatencyUnit::Millis),
+                ),
+        )
         //        .merge(protected_routes)
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
-    println!("Сервер запущен на http://{}", addr);
+    tracing::info!("Server is up: http://{}", addr);
 
     let listener = TcpListener::bind(addr).await.unwrap();
     axum::serve(listener, app).await.unwrap();

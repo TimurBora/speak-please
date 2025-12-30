@@ -7,9 +7,7 @@ use axum::{
 use shared::{
     endpoints::{API, refresh_token_endpoints::RefreshTokenEndpoints},
     errors::{AppError, AppResult, auth_errors::AuthError, jwt_errors::JwtError},
-    models::refresh_token_dto::{
-        CreateRefreshTokenRequest, CreateRefreshTokenResponse, DeleteRefreshTokenRequest,
-    },
+    models::refresh_token_dto::{CreateRefreshTokenRequest, CreateRefreshTokenResponse},
     utils::{jwt::create_access_token, time::is_expired, ulid_validation::validate_ulid},
 };
 
@@ -30,6 +28,7 @@ pub fn refresh_token_router() -> Router<AppState> {
     //.route("/login", post(login))
 }
 
+#[tracing::instrument(skip(state))]
 pub async fn create_refresh_access_token(
     State(state): State<AppState>,
     Json(payload): Json<CreateRefreshTokenRequest>,
@@ -48,7 +47,7 @@ pub async fn create_refresh_access_token(
         return Err(JwtError::InvalidToken.into());
     }
 
-    let access_token = create_access_token(refresh_token.user_id, payload.username)?;
+    let access_token = create_access_token(refresh_token.user_id, payload.email)?;
 
     let (_, new_refresh_token) =
         RefreshTokenService::rotate_refresh_token(&state.connection, &payload.refresh_token)
@@ -61,14 +60,12 @@ pub async fn create_refresh_access_token(
     }))
 }
 
+#[tracing::instrument(skip(state))]
 async fn delete_refresh_token(
     Path(id): Path<String>,
     State(state): State<AppState>,
-    Json(payload): Json<DeleteRefreshTokenRequest>,
 ) -> AppResult<StatusCode> {
-    payload.validate().map_err(|_| JwtError::InvalidToken)?;
     validate_ulid(&id)?;
-
     let delete_result = RefreshTokenService::delete_by_token(&state.connection, &id).await?;
 
     if delete_result.rows_affected == 0 {

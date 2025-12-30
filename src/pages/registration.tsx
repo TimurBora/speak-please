@@ -22,10 +22,6 @@ const Register: React.FC = () => {
   const { setIsLoading, isLoading, error, setError } = useAuthStore();
   const navigate = useNavigate();
 
-  useEffect(() => {
-    setError(null);
-  }, [setError]);
-
   const formatError = (err: ErrorBody): string => {
     return UI_MESSAGES[err.error_type] || err.message || "Unknown error";
   };

@@ -12,7 +12,7 @@ sea-orm = { version = "2.0.0-rc.22", features = [
   "sqlx-sqlite",
   "runtime-tokio-rustls",
   "macros",
-
+  "debug-print",
 ] }
 tokio = { version = "1.47.2", features = ["full"] }
 argon2 = { version = "0.6.0-rc.5", features = ["getrandom"] }
@@ -23,3 +23,6 @@ jwt-simple = "0.12.13"
 dotenv = "0.15.0"
 ulid = "1.2.1"
 validator = { version = "0.20", features = ["derive"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter", "fmt"] }
+tower-http = { version = "0.6.8", features = ["trace"] }

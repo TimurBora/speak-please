@@ -19,4 +19,8 @@ impl API for RefreshTokenEndpoints {
             Self::DeleteRefreshToken(_) => "/refresh_token/{id}",
         }
     }
+
+    fn is_auth_endpoint(&self) -> bool {
+        true
+    }
 }

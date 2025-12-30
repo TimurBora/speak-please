@@ -15,6 +15,8 @@ pub mod user_skills;
 pub mod users;
 
 pub mod prelude {
+    pub use super::daily_quests::Entity as DailyQuest;
     pub use super::refresh_tokens::Entity as RefreshToken;
+    pub use super::user_quest_status::Entity as UserQuestStatus;
     pub use super::users::Entity as User;
 }

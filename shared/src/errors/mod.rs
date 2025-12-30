@@ -7,6 +7,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
+use sea_orm::{DbErr, SqlErr};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use thiserror::Error;
@@ -33,6 +34,9 @@ pub enum AppError {
 
     #[error("External API error: {0}")]
     Api(String),
+
+    #[error("Server error: {0}")]
+    Server(String),
 
     #[error("Validation error: {0}")]
     Validation(
@@ -85,6 +89,37 @@ impl AppError {
             ),
         }
     }
+
+    pub async fn from_response(res: reqwest::Response) -> Self {
+        let status = res.status();
+
+        if let Ok(error_body) = res.json::<ErrorBody>().await {
+            return error_body.into();
+        }
+
+        Self::Api(format!("HTTP Error: {}", status))
+    }
+}
+
+impl From<ErrorBody> for AppError {
+    fn from(error_body: ErrorBody) -> Self {
+        match error_body.error_type {
+            ErrorCode::AuthInvalid => Self::Auth(AuthError::InvalidCredentials),
+            ErrorCode::UserExists => Self::Auth(AuthError::UserAlreadyExists),
+            ErrorCode::ValidationError => {
+                Self::Auth(AuthError::ValidationError(error_body.message))
+            }
+            ErrorCode::NotFound => Self::NotFound,
+            ErrorCode::DatabaseError => Self::Database(sea_orm::DbErr::Custom(error_body.message)),
+            ErrorCode::ServerError => Self::Server(error_body.message),
+        }
+    }
+}
+
+impl From<reqwest::Error> for AppError {
+    fn from(err: reqwest::Error) -> Self {
+        Self::Api(err.to_string())
+    }
 }
 
 impl IntoResponse for AppError {
@@ -104,13 +139,25 @@ impl From<sea_orm::TransactionError<AppError>> for AppError {
     }
 }
 
-impl From<reqwest::Error> for AppError {
-    fn from(err: reqwest::Error) -> Self {
-        Self::Api(err.to_string())
+pub trait DbResultExt<T> {
+    fn map_db_error(self) -> AppResult<T>;
+}
+
+impl<T> DbResultExt<T> for Result<T, DbErr> {
+    fn map_db_error(self) -> AppResult<T> {
+        self.map_err(|err| {
+            if let Some(SqlErr::UniqueConstraintViolation(details)) = err.sql_err() {
+                tracing::warn!(target: "db", violation = %details, "Unique constraint violation");
+                return AppError::Auth(AuthError::UserAlreadyExists);
+            }
+
+            tracing::error!(target: "db", error = %err, "Database operation failed");
+            AppError::Database(err)
+        })
     }
 }
 
-#[derive(Serialize, Deserialize, Type)]
+#[derive(Debug, Serialize, Deserialize, Type)]
 pub struct ErrorBody {
     error_type: ErrorCode,
     message: String,
@@ -126,7 +173,7 @@ impl From<AppError> for ErrorBody {
     }
 }
 
-#[derive(Serialize, Deserialize, Type)]
+#[derive(Debug, Serialize, Deserialize, Type)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ErrorCode {
     AuthInvalid,
