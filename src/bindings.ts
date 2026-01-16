@@ -47,6 +47,14 @@ async deleteRefreshToken(account: string) : Promise<Result<null, ErrorBody>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+async getUserQuests() : Promise<Result<UserQuestStatusResponse[], ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_user_quests") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -60,12 +68,16 @@ async deleteRefreshToken(account: string) : Promise<Result<null, ErrorBody>> {
 
 /** user-defined types **/
 
+export type Complexity = "easy" | "medium" | "hard"
 export type ErrorBody = { error_type: ErrorCode; message: string }
 export type ErrorCode = "AUTH_INVALID" | "USER_EXISTS" | "VALIDATION_ERROR" | "NOT_FOUND" | "DATABASE_ERROR" | "SERVER_ERROR"
 export type LoginRequest = { password: string; email: string }
 export type LoginResponse = { ulid: string; username: string; email: string; refresh_token: string }
+export type QuestDto = { ulid: string; title: string; description: string | null; complexity: Complexity; xp_reward: number; validation_type: string; target_value: number }
+export type QuestStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "IN_PENDING" | "FAILED"
 export type RegisterRequest = { username: string; email: string; password: string }
 export type RegisterResponse = { ulid: string; username: string; email: string; created_at: string; refresh_token: string }
+export type UserQuestStatusResponse = { user_ulid: string; quest: QuestDto; status: QuestStatus; current_value: number; is_completed: boolean; completed_at: string | null }
 export type UserSession = { access_token: string | null; email: string; user_ulid: string }
 
 /** tauri-specta globals **/

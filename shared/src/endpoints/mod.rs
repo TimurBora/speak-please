@@ -9,3 +9,4 @@ pub trait API {
 
 pub mod refresh_token_endpoints;
 pub mod user_endpoints;
+pub mod user_quest_status_endpoints;

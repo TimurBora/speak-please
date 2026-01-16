@@ -1,8 +1,10 @@
 use sea_orm::{ActiveValue::Set, entity::prelude::*, sqlx::types::chrono};
+use serde::{Deserialize, Serialize};
+use specta::Type;
 use ulid::Ulid;
 
 #[sea_orm::model]
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize, Type)]
 #[sea_orm(table_name = "users")]
 pub struct Model {
     #[sea_orm(primary_key)]
@@ -16,9 +18,9 @@ pub struct Model {
     pub total_xp_accumulated: i32,
     pub level: i32,
     pub created_at: DateTimeUtc,
-    pub daily_quests_streak: i32,
 
     #[sea_orm(has_many)]
+    #[serde(skip)]
     pub refresh_token: HasMany<super::refresh_tokens::Entity>,
 }
 
@@ -33,7 +35,6 @@ impl ActiveModel {
             total_xp_accumulated: Set(0),
             level: Set(1),
             created_at: Set(chrono::Utc::now()),
-            daily_quests_streak: Set(0),
         }
     }
 }

@@ -1,6 +1,6 @@
+use crate::entities::{prelude::*, refresh_tokens};
 use sea_orm::{DeleteResult, TransactionTrait, entity::prelude::*, sqlx::types::chrono};
 use shared::{
-    entities::{prelude::*, refresh_tokens},
     errors::{AppError, AppResult, auth_errors::AuthError, jwt_errors::JwtError},
     utils::hashing::hash,
 };

@@ -1,4 +1,3 @@
-
 import { create } from 'zustand';
 import { commands, UserSession } from '../bindings';
 
@@ -9,63 +8,43 @@ interface AuthState {
   isLoading: boolean;
   checkSession: () => Promise<void>;
   setIsLoading: (isLoading: boolean) => void;
-  setIsAuthenticated: (isAuthenticated: boolean) => void;
   setError: (error: string | null) => void;
   logout: () => Promise<void>;
+  resetError: () => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   userSession: null,
   error: null,
-  isLoading: true,
+  isLoading: false,
 
   checkSession: async () => {
-    if (useAuthStore.getState().isLoading && useAuthStore.getState().userSession !== null) return;
-
-    set({ isLoading: true, error: null });
-
+    // Не ставим isLoading: true здесь, чтобы не перебивать лоадер кнопки
     try {
       const response = await commands.getCurrentSession();
-
-      if (response.status === "ok") {
-        if (response.data) {
-          set({
-            isAuthenticated: true,
-            userSession: response.data,
-            isLoading: false,
-            error: null
-          });
-        } else {
-          set({ isAuthenticated: false, userSession: null, isLoading: false });
-        }
-      } else {
+      if (response.status === "ok" && response.data) {
         set({
-          isAuthenticated: false,
-          userSession: null,
-          isLoading: false,
-          error: null,
+          isAuthenticated: true,
+          userSession: response.data,
         });
+      } else {
+        set({ isAuthenticated: false, userSession: null });
       }
     } catch (err) {
-      console.error("IPC Bridge Error:", err);
-      set({
-        isAuthenticated: false,
-        isLoading: false
-      });
+      set({ isAuthenticated: false, userSession: null });
     }
   },
 
   logout: async () => {
     try {
       await commands.logout();
-      set({ isAuthenticated: false, userSession: null });
-    } catch (err) {
-      console.error("Logout error:", err);
+    } finally {
+      set({ isAuthenticated: false, userSession: null, error: null });
     }
   },
 
-  setIsLoading: (isLoading: boolean) => set({ isLoading }),
-  setError: (error: string | null) => set({ error }),
-  setIsAuthenticated: (isAuthenticated: boolean) => set({ isAuthenticated })
+  setIsLoading: (loading: boolean) => set({ isLoading: loading }),
+  setError: (err: string | null) => set({ error: err }),
+  resetError: () => set({ error: null }),
 }));

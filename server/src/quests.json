@@ -1,0 +1,82 @@
+[
+  {
+    "title": "Mirror Talk",
+    "description": "Look into your eyes in the mirror and say: 'I am enough and I deserve happiness.'",
+    "complexity": "Easy",
+    "xp_reward": 15,
+    "validation_type": "AUTOMATIC",
+    "target_value": 1
+  },
+  {
+    "title": "The 'No' Power",
+    "description": "Set a boundary by politely declining a task that drains your energy.",
+    "complexity": "Hard",
+    "xp_reward": 120,
+    "validation_type": "COMMUNITY",
+    "target_value": 1
+  },
+  {
+    "title": "Strength Listing",
+    "description": "Write down 5 personal strengths that helped you in the past week.",
+    "complexity": "Medium",
+    "xp_reward": 45,
+    "validation_type": "AUTOMATIC",
+    "target_value": 5
+  },
+  {
+    "title": "Self-Care Break",
+    "description": "Take 15 minutes for a walk or meditation without any digital distractions.",
+    "complexity": "Easy",
+    "xp_reward": 25,
+    "validation_type": "AUTOMATIC",
+    "target_value": 1
+  },
+  {
+    "title": "Comfort Zone Stretch",
+    "description": "Start a short conversation with a stranger or a colleague you rarely talk to.",
+    "complexity": "Hard",
+    "xp_reward": 150,
+    "validation_type": "MODERATION",
+    "target_value": 1
+  },
+  {
+    "title": "Victory Log",
+    "description": "Record one 'small win' at the end of the day.",
+    "complexity": "Easy",
+    "xp_reward": 20,
+    "validation_type": "AUTOMATIC",
+    "target_value": 1
+  },
+  {
+    "title": "Positive Feedback Loop",
+    "description": "Give a genuine compliment to someone else; notice how it makes you feel.",
+    "complexity": "Medium",
+    "xp_reward": 40,
+    "validation_type": "COMMUNITY",
+    "target_value": 1
+  },
+  {
+    "title": "Unsubscribe Cleanse",
+    "description": "Unfollow 5 accounts on social media that make you feel inadequate.",
+    "complexity": "Medium",
+    "xp_reward": 60,
+    "validation_type": "AUTOMATIC",
+    "target_value": 5
+  },
+  {
+    "title": "Forgiveness Letter",
+    "description": "Write a short note to yourself forgiving a past mistake.",
+    "complexity": "Hard",
+    "xp_reward": 200,
+    "validation_type": "MODERATION",
+    "target_value": 1
+  },
+  {
+    "title": "Body Gratitude",
+    "description": "Acknowledge one thing your body did for you today (e.g., 'kept me moving').",
+    "complexity": "Easy",
+    "xp_reward": 15,
+    "validation_type": "AUTOMATIC",
+    "target_value": 1
+  }
+]

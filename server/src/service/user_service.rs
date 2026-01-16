@@ -8,10 +8,11 @@
 
 use sea_orm::entity::prelude::*;
 use shared::{
-    entities::{prelude::*, users},
     errors::{AppError, AppResult, DbResultExt, auth_errors::AuthError},
     utils::hashing::{hash, verify_hash},
 };
+
+use crate::entities::{prelude::*, users};
 
 pub struct UserService;
 

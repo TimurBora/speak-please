@@ -4,7 +4,8 @@ use reqwest::{Client, Method, StatusCode};
 use serde::{Deserialize, Serialize};
 use shared::{
     endpoints::{
-        refresh_token_endpoints::RefreshTokenEndpoints, user_endpoints::UserEndpoints, API,
+        refresh_token_endpoints::RefreshTokenEndpoints, user_endpoints::UserEndpoints,
+        user_quest_status_endpoints::UserQuestEndpoints, API,
     },
     errors::{jwt_errors::JwtError, AppError, AppResult, FrontendRepresentation},
     models::{
@@ -243,6 +244,33 @@ fn check_access_token(access_token: String) -> bool {
 
 #[tauri::command]
 #[specta::specta]
+async fn get_user_quests(
+    state: State<'_, AppState>,
+) -> FrontendRepresentation<Vec<shared::models::user_quest_status_dto::UserQuestStatusResponse>> {
+    let service = &state.0;
+
+    let ulid = {
+        let session_lock = service.session.read().await;
+        let session_lock = session_lock.as_ref().ok_or_else(|| {
+            error!("Refresh failed: No active session found");
+            AppError::NotFound
+        })?;
+        session_lock.user_ulid.clone()
+    };
+
+    let response: Vec<shared::models::user_quest_status_dto::UserQuestStatusResponse> = service
+        .perform_request(
+            Method::GET,
+            None::<&()>,
+            UserQuestEndpoints::GetDailyQuests(ulid),
+        )
+        .await?;
+
+    Ok(response)
+}
+
+#[tauri::command]
+#[specta::specta]
 async fn get_current_session(
     state: State<'_, AppState>,
 ) -> FrontendRepresentation<Option<UserSession>> {
@@ -461,6 +489,7 @@ pub fn run() {
         get_current_session,
         check_access_token,
         delete_refresh_token,
+        get_user_quests,
     ]);
 
     #[cfg(all(debug_assertions, not(mobile)))]
