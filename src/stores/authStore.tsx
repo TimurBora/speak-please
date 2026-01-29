@@ -6,6 +6,7 @@ interface AuthState {
   userSession: UserSession | null;
   error: string | null;
   isLoading: boolean;
+  getUserId: () => string | null;
   checkSession: () => Promise<void>;
   setIsLoading: (isLoading: boolean) => void;
   setError: (error: string | null) => void;
@@ -13,14 +14,15 @@ interface AuthState {
   resetError: () => void;
 }
 
-export const useAuthStore = create<AuthState>((set) => ({
+export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   userSession: null,
   error: null,
-  isLoading: false,
+  isLoading: true,
+
+  getUserId: () => get().userSession?.user_ulid || null,
 
   checkSession: async () => {
-    // Не ставим isLoading: true здесь, чтобы не перебивать лоадер кнопки
     try {
       const response = await commands.getCurrentSession();
       if (response.status === "ok" && response.data) {
@@ -33,6 +35,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
     } catch (err) {
       set({ isAuthenticated: false, userSession: null });
+    } finally {
+      set({ isLoading: false });
     }
   },
 

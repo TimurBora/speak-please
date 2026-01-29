@@ -5,8 +5,10 @@ pub struct Migration;
 
 #[async_trait::async_trait]
 impl MigrationTrait for Migration {
+    // 1. Primary tables (no dependencies)
+    // 2. Secondary tables (depend on users/lobbies)
+    // 3. Junction/Detail tables (complex relations)
     async fn up(&self, manager: &SchemaManager) -> Result<(), DbErr> {
-        // 1. Users Table
         manager
             .create_table(
                 Table::create()
@@ -40,34 +42,64 @@ impl MigrationTrait for Migration {
                     )
                     .col(ColumnDef::new(Users::Level).integer().not_null().default(1))
                     .col(ColumnDef::new(Users::CreatedAt).date_time().not_null())
+                    .col(ColumnDef::new(Users::LastActiveAt).date_time().not_null())
+                    .col(ColumnDef::new(Users::AvatarUrl).string())
+                    .col(ColumnDef::new(Users::Bio).string())
                     .to_owned(),
             )
             .await?;
 
-        // 2. Quests Table (Убрали current_value, так как он в UserQuestStatus)
+        manager
+            .create_table(
+                Table::create()
+                    .table(Lobbies::Table)
+                    .if_not_exists()
+                    .col(ColumnDef::new(Lobbies::Ulid).string_len(26).primary_key())
+                    .col(ColumnDef::new(Lobbies::Name).string().not_null())
+                    .col(ColumnDef::new(Lobbies::Topic).string().not_null())
+                    .col(ColumnDef::new(Lobbies::Description).string())
+                    .col(ColumnDef::new(Lobbies::OwnerId).string_len(26).not_null())
+                    .col(ColumnDef::new(Lobbies::CreatedAt).date_time().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-lobby-owner")
+                            .from(Lobbies::Table, Lobbies::OwnerId)
+                            .to(Users::Table, Users::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
         manager
             .create_table(
                 Table::create()
                     .table(Quests::Table)
                     .if_not_exists()
                     .col(ColumnDef::new(Quests::Ulid).string_len(26).primary_key())
+                    .col(ColumnDef::new(Quests::LobbyId).string_len(26).null())
                     .col(ColumnDef::new(Quests::Title).string().not_null())
                     .col(ColumnDef::new(Quests::Description).string())
-                    .col(ColumnDef::new(Quests::Complexity).char_len(1).not_null()) // 'E', 'M', 'H'
+                    .col(ColumnDef::new(Quests::Complexity).char_len(1).not_null())
                     .col(ColumnDef::new(Quests::XpReward).integer().not_null())
                     .col(ColumnDef::new(Quests::ValidationType).string().not_null())
                     .col(ColumnDef::new(Quests::TargetValue).integer().not_null())
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-quest-lobby_id")
+                            .from(Quests::Table, Quests::LobbyId)
+                            .to(Lobbies::Table, Lobbies::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
                     .to_owned(),
             )
             .await?;
 
-        // 3. UserQuestStatus Table (Новая таблица на основе вашей модели)
         manager
             .create_table(
                 Table::create()
                     .table(UserQuestStatus::Table)
                     .if_not_exists()
-                    // Составной первичный ключ
                     .col(
                         ColumnDef::new(UserQuestStatus::UserId)
                             .string_len(26)
@@ -111,7 +143,6 @@ impl MigrationTrait for Migration {
                             .date_time()
                             .not_null(),
                     )
-                    // Внешние ключи
                     .foreign_key(
                         ForeignKey::create()
                             .name("fk-user_quest_status-user_id")
@@ -130,7 +161,6 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // 4. RefreshTokens
         manager
             .create_table(
                 Table::create()
@@ -168,7 +198,6 @@ impl MigrationTrait for Migration {
             )
             .await?;
 
-        // 5. QuestProofs
         manager
             .create_table(
                 Table::create()
@@ -196,16 +225,21 @@ impl MigrationTrait for Migration {
                         ColumnDef::new(QuestProofs::Status)
                             .string()
                             .not_null()
-                            .default("pending"),
+                            .default("IN_PENDING"),
                     )
                     .col(
-                        ColumnDef::new(QuestProofs::VotesCount)
+                        ColumnDef::new(QuestProofs::BeliefsCount)
                             .integer()
                             .not_null()
                             .default(0),
                     )
                     .col(
                         ColumnDef::new(QuestProofs::CreatedAt)
+                            .date_time()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(QuestProofs::UpdatedAt)
                             .date_time()
                             .not_null(),
                     )
@@ -225,10 +259,108 @@ impl MigrationTrait for Migration {
                     )
                     .to_owned(),
             )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(QuestProofBeliefs::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(QuestProofBeliefs::UserId)
+                            .string_len(26)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(QuestProofBeliefs::ProofId)
+                            .string_len(26)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(QuestProofBeliefs::CreatedAt)
+                            .date_time()
+                            .not_null(),
+                    )
+                    .primary_key(
+                        Index::create()
+                            .col(QuestProofBeliefs::UserId)
+                            .col(QuestProofBeliefs::ProofId),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-belief-user")
+                            .from(QuestProofBeliefs::Table, QuestProofBeliefs::UserId)
+                            .to(Users::Table, Users::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-belief-proof")
+                            .from(QuestProofBeliefs::Table, QuestProofBeliefs::ProofId)
+                            .to(QuestProofs::Table, QuestProofs::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
+            .await?;
+
+        manager
+            .create_table(
+                Table::create()
+                    .table(LobbyMembers::Table)
+                    .if_not_exists()
+                    .col(
+                        ColumnDef::new(LobbyMembers::LobbyId)
+                            .string_len(26)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(LobbyMembers::UserId)
+                            .string_len(26)
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(LobbyMembers::JoinedAt)
+                            .date_time()
+                            .not_null(),
+                    )
+                    .col(
+                        ColumnDef::new(LobbyMembers::Role)
+                            .char_len(15)
+                            .default("MEMBER"),
+                    )
+                    .primary_key(
+                        Index::create()
+                            .col(LobbyMembers::LobbyId)
+                            .col(LobbyMembers::UserId),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-lobby_members-lobby_id")
+                            .from(LobbyMembers::Table, LobbyMembers::LobbyId)
+                            .to(Lobbies::Table, Lobbies::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .foreign_key(
+                        ForeignKey::create()
+                            .name("fk-lobby_members-user_id")
+                            .from(LobbyMembers::Table, LobbyMembers::UserId)
+                            .to(Users::Table, Users::Ulid)
+                            .on_delete(ForeignKeyAction::Cascade),
+                    )
+                    .to_owned(),
+            )
             .await
     }
 
+    // Drop tables in reverse order of creation to avoid foreign key violations
     async fn down(&self, manager: &SchemaManager) -> Result<(), DbErr> {
+        manager
+            .drop_table(Table::drop().table(LobbyMembers::Table).to_owned())
+            .await?;
+        manager
+            .drop_table(Table::drop().table(QuestProofBeliefs::Table).to_owned())
+            .await?;
         manager
             .drop_table(Table::drop().table(QuestProofs::Table).to_owned())
             .await?;
@@ -238,12 +370,17 @@ impl MigrationTrait for Migration {
         manager
             .drop_table(Table::drop().table(UserQuestStatus::Table).to_owned())
             .await?;
+
         manager
             .drop_table(Table::drop().table(Quests::Table).to_owned())
             .await?;
         manager
+            .drop_table(Table::drop().table(Lobbies::Table).to_owned())
+            .await?;
+        manager
             .drop_table(Table::drop().table(Users::Table).to_owned())
-            .await
+            .await?;
+        Ok(())
     }
 }
 
@@ -258,12 +395,16 @@ enum Users {
     TotalXpAccumulated,
     Level,
     CreatedAt,
+    LastActiveAt,
+    AvatarUrl,
+    Bio,
 }
 
 #[derive(DeriveIden)]
 enum Quests {
     Table,
     Ulid,
+    LobbyId,
     Title,
     Description,
     Complexity,
@@ -303,6 +444,35 @@ enum QuestProofs {
     Photos,
     VoiceNotes,
     Status,
-    VotesCount,
+    BeliefsCount,
     CreatedAt,
+    UpdatedAt,
+}
+
+#[derive(DeriveIden)]
+pub enum QuestProofBeliefs {
+    Table,
+    UserId,
+    ProofId,
+    CreatedAt,
+}
+
+#[derive(DeriveIden)]
+enum Lobbies {
+    Table,
+    Ulid,
+    Name,
+    Topic,
+    Description,
+    OwnerId,
+    CreatedAt,
+}
+
+#[derive(DeriveIden)]
+enum LobbyMembers {
+    Table,
+    LobbyId,
+    UserId,
+    JoinedAt,
+    Role,
 }

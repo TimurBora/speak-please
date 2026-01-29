@@ -9,6 +9,7 @@ use crate::entities::{prelude::*, quests};
 pub struct QuestService;
 
 impl QuestService {
+    #[expect(clippy::too_many_arguments)]
     pub async fn create_quest(
         db: &DatabaseConnection,
         title: String,
@@ -17,6 +18,7 @@ impl QuestService {
         validation_type: String,
         target_value: u32,
         complexity: Complexity,
+        lobby_id: Option<String>,
     ) -> AppResult<quests::Model> {
         let new_quest = quests::ActiveModel::new_daily_quest(
             &title,
@@ -25,6 +27,7 @@ impl QuestService {
             &validation_type,
             Some(target_value),
             Some(complexity),
+            lobby_id,
         );
 
         let model = new_quest.insert(db).await.map_err(AppError::from)?;

@@ -45,3 +45,9 @@ input, textarea {
 .animate-spin-slow {
   animation: spin-slow 8s linear infinite;
 }
+
+
+:root {
+  --top-bar-height: 64px;
+  --bottom-bar-height: 80px;
+}

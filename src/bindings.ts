@@ -48,9 +48,97 @@ async deleteRefreshToken(account: string) : Promise<Result<null, ErrorBody>> {
     else return { status: "error", error: e  as any };
 }
 },
-async getUserQuests() : Promise<Result<UserQuestStatusResponse[], ErrorBody>> {
+async getDailyQuests() : Promise<Result<UserQuestStatusResponse[], ErrorBody>> {
     try {
-    return { status: "ok", data: await TAURI_INVOKE("get_user_quests") };
+    return { status: "ok", data: await TAURI_INVOKE("get_daily_quests") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async submitQuestProof(questUlid: string, payload: SubmitProofRequest, imageList: number[][] | null, audioList: number[][] | null) : Promise<Result<SubmitProofResponse, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("submit_quest_proof", { questUlid, payload, imageList, audioList }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getProofFeed(limit: number | null, offset: number | null) : Promise<Result<ProofFeedResponse, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_proof_feed", { limit, offset }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getProofDetails(proofUlid: string) : Promise<Result<ProofDetailsResponse, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_proof_details", { proofUlid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async toggleProofBelief(proofUlid: string) : Promise<Result<null, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("toggle_proof_belief", { proofUlid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getSomeoneJournal(userUlid: string) : Promise<Result<ProofDetailsResponse[], ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_someone_journal", { userUlid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getMyJournal() : Promise<Result<ProofDetailsResponse[], ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_my_journal") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createLobby(name: string, topic: string, description: string | null) : Promise<Result<LobbyDto, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_lobby", { name, topic, description }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getAllLobbies() : Promise<Result<LobbyFeedResponse, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_all_lobbies") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getLobbyDetail(lobbyUlid: string) : Promise<Result<LobbyDetailsResponse, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_lobby_detail", { lobbyUlid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getLobbyMemebersCount(lobbyUlid: string) : Promise<Result<number, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_lobby_memebers_count", { lobbyUlid }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async joinLobby(lobbyUlid: string) : Promise<Result<LobbyMemberDto, ErrorBody>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("join_lobby", { lobbyUlid }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -70,15 +158,25 @@ async getUserQuests() : Promise<Result<UserQuestStatusResponse[], ErrorBody>> {
 
 export type Complexity = "easy" | "medium" | "hard"
 export type ErrorBody = { error_type: ErrorCode; message: string }
-export type ErrorCode = "AUTH_INVALID" | "USER_EXISTS" | "VALIDATION_ERROR" | "NOT_FOUND" | "DATABASE_ERROR" | "SERVER_ERROR"
+export type ErrorCode = "AUTH_INVALID" | "USER_EXISTS" | "VALIDATION_ERROR" | "NOT_FOUND" | "DATABASE_ERROR" | "SERVER_ERROR" | "CUSTOM_ERROR"
+export type LobbyDetailsResponse = { lobby: LobbyDto; members_count: number }
+export type LobbyDto = { ulid: string; name: string; topic: string; description: string | null; owner_id: string; created_at: string }
+export type LobbyFeedItem = { lobby: LobbyDto; is_member: boolean }
+export type LobbyFeedResponse = { items: LobbyFeedItem[] }
+export type LobbyMemberDto = { lobby_id: string; user_id: string; role: Role; joined_at: string }
 export type LoginRequest = { password: string; email: string }
-export type LoginResponse = { ulid: string; username: string; email: string; refresh_token: string }
+export type LoginResponse = { ulid: string; username: string; email: string; refresh_token: string; level: number; avatar_url: string | null }
+export type ProofDetailsResponse = { ulid: string; user_id: string; username: string; avatar_url: string | null; quest_id: string; quest_title: string; quest_description: string | null; xp_reward: number; proof_text: string | null; status: string; photo_urls: string[]; voice_urls: string[]; beliefs_count: number; is_believed: boolean; created_at: string }
+export type ProofFeedResponse = { items: ProofDetailsResponse[]; has_more: boolean; next_offset: number }
 export type QuestDto = { ulid: string; title: string; description: string | null; complexity: Complexity; xp_reward: number; validation_type: string; target_value: number }
-export type QuestStatus = "NOT_STARTED" | "IN_PROGRESS" | "COMPLETED" | "IN_PENDING" | "FAILED"
+export type QuestStatus = "IN_PROGRESS" | "COMPLETED" | "IN_PENDING" | "FAILED"
 export type RegisterRequest = { username: string; email: string; password: string }
-export type RegisterResponse = { ulid: string; username: string; email: string; created_at: string; refresh_token: string }
+export type RegisterResponse = { ulid: string; username: string; email: string; created_at: string; refresh_token: string; level: number; avatar_url: string | null }
+export type Role = "STRANGER" | "MEMBER" | "HELPER" | "MODERATOR" | "ADMIN"
+export type SubmitProofRequest = { proof_text: string | null; photo_count: number; voice_count: number }
+export type SubmitProofResponse = { proof_ulid: string; status: string; photo_upload_urls: string[]; voice_upload_urls: string[] }
 export type UserQuestStatusResponse = { user_ulid: string; quest: QuestDto; status: QuestStatus; current_value: number; is_completed: boolean; completed_at: string | null }
-export type UserSession = { access_token: string | null; email: string; user_ulid: string }
+export type UserSession = { access_token: string | null; user_ulid: string; email: string; username: string; level: number; avatar_url: string | null }
 
 /** tauri-specta globals **/
 

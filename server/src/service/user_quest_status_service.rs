@@ -4,7 +4,7 @@ use sea_orm::{
 };
 use shared::{
     errors::{AppError, AppResult},
-    models::quest_dto::Complexity,
+    models::{quest_dto::Complexity, user_quest_status_dto::QuestStatus},
 };
 use ulid::Ulid;
 
@@ -29,55 +29,20 @@ impl UserQuestService {
             .ok_or(AppError::NotFound)
     }
 
-    pub async fn complete_quest(
-        db: &DatabaseConnection,
-        user_id: &str,
-        quest_id: &str,
-        date: Date,
-    ) -> AppResult<user_quest_status::Model> {
-        let quest = Quest::find_by_id(quest_id)
-            .one(db)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        let status = UserQuestStatus::find_by_id((user_id.to_owned(), quest_id.to_owned(), date))
-            .one(db)
-            .await?
-            .ok_or(AppError::NotFound)?;
-
-        if status.is_completed {
-            return Err(AppError::Validation(validator::ValidationError::new(
-                "Quest already completed",
-            )));
-        }
-
-        let mut active_status: user_quest_status::ActiveModel = status.into();
-        active_status.is_completed = Set(true);
-        active_status.updated_at = Set(chrono::Utc::now());
-
-        let txn = db.begin().await?;
-
-        let updated_model = active_status.update(&txn).await?;
-
-        //        UserService::add_xp(&txn, user_id, quest.xp_reward as i32)
-        //           .await
-        //          .map_err(AppError::Api)?;
-
-        txn.commit().await?;
-
-        Ok(updated_model)
-    }
-
     pub async fn get_user_journal(
         db: &DatabaseConnection,
         user_id: &str,
-    ) -> AppResult<Vec<(user_quest_status::Model, Option<quests::Model>)>> {
-        UserQuestStatus::find()
+    ) -> AppResult<Vec<(user_quest_status::Model, quests::Model)>> {
+        let data = UserQuestStatus::find()
             .filter(user_quest_status::Column::UserId.eq(user_id))
             .find_also_related(Quest)
             .all(db)
-            .await
-            .map_err(AppError::from)
+            .await?;
+
+        Ok(data
+            .into_iter()
+            .filter_map(|(status, quest_opt)| quest_opt.map(|q| (status, q)))
+            .collect())
     }
 
     pub async fn assign_multiple_quests(
@@ -98,7 +63,6 @@ impl UserQuestService {
         if !records.is_empty() {
             UserQuestStatus::insert_many(records).exec(db).await?;
         }
-
         Ok(())
     }
 
@@ -107,8 +71,6 @@ impl UserQuestService {
         user_id: &str,
     ) -> AppResult<Vec<quests::Model>> {
         let today = chrono::Utc::now().date_naive();
-
-        // 1. Пытаемся получить квесты за сегодня
         let daily_status = UserQuestStatus::find()
             .filter(user_quest_status::Column::UserId.eq(user_id))
             .filter(user_quest_status::Column::AssignedAt.eq(today))
@@ -117,23 +79,58 @@ impl UserQuestService {
             .await?;
 
         if !daily_status.is_empty() {
-            // Возвращаем только сами модели квестов
             return Ok(daily_status.into_iter().filter_map(|(_, q)| q).collect());
         }
 
-        // 2. Если квестов нет, выбираем новые (2 Easy, 2 Medium, 1 Hard)
-        // Можно добавить исключение последних выполненных квестов здесь
         let mut selected = Vec::new();
-
         selected.extend(Self::pick_random_by_complexity(db, Complexity::Easy, 2, &[]).await?);
         selected.extend(Self::pick_random_by_complexity(db, Complexity::Medium, 2, &[]).await?);
         selected.extend(Self::pick_random_by_complexity(db, Complexity::Hard, 1, &[]).await?);
 
-        // 3. Сохраняем их в базу через твой assign_multiple_quests
         let ids: Vec<String> = selected.iter().map(|q| q.ulid.clone()).collect();
         Self::assign_multiple_quests(db, user_id, ids, today).await?;
 
         Ok(selected)
+    }
+
+    pub async fn get_daily_quests_with_status(
+        db: &DatabaseConnection,
+        user_id: &str,
+    ) -> AppResult<Vec<(user_quest_status::Model, quests::Model)>> {
+        let today = chrono::Utc::now().date_naive();
+
+        let daily_data = UserQuestStatus::find()
+            .filter(user_quest_status::Column::UserId.eq(user_id))
+            .filter(user_quest_status::Column::AssignedAt.eq(today))
+            .find_also_related(Quest)
+            .all(db)
+            .await?;
+
+        if !daily_data.is_empty() {
+            return Ok(daily_data
+                .into_iter()
+                .filter_map(|(s, q)| q.map(|quest| (s, quest)))
+                .collect());
+        }
+
+        let quests = Self::get_or_assign_quests(db, user_id).await?;
+        let result = quests
+            .into_iter()
+            .map(|q| {
+                let status = user_quest_status::Model {
+                    user_id: user_id.to_string(),
+                    quest_id: q.ulid.clone(),
+                    assigned_at: today,
+                    is_completed: false,
+                    current_value: 0,
+                    quest_status: QuestStatus::InProgress,
+                    updated_at: chrono::Utc::now(),
+                };
+                (status, q)
+            })
+            .collect();
+
+        Ok(result)
     }
 
     async fn pick_random_by_complexity(
@@ -143,17 +140,53 @@ impl UserQuestService {
         exclude_ids: &[String],
     ) -> AppResult<Vec<quests::Model>> {
         let mut query = Quest::find().filter(quests::Column::Complexity.eq(complexity));
-
         if !exclude_ids.is_empty() {
             query = query.filter(quests::Column::Ulid.is_not_in(exclude_ids));
         }
-
-        // Используем ORDER BY RANDOM() (для Postgres/SQLite)
         query
             .order_by(Expr::cust("RANDOM()"), Order::Asc)
             .limit(limit)
             .all(db)
             .await
             .map_err(AppError::from)
+    }
+
+    pub async fn complete_quest_internal<C>(
+        db: &C,
+        user_id: &str,
+        quest_id: &str,
+        date: Date,
+    ) -> AppResult<user_quest_status::Model>
+    where
+        C: ConnectionTrait,
+    {
+        let status = UserQuestStatus::find_by_id((user_id.to_owned(), quest_id.to_owned(), date))
+            .one(db)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        if status.is_completed {
+            return Ok(status);
+        }
+
+        let mut active_status: user_quest_status::ActiveModel = status.into();
+        active_status.is_completed = Set(true);
+        active_status.quest_status = Set(QuestStatus::Completed);
+        active_status.updated_at = Set(chrono::Utc::now());
+
+        Ok(active_status.update(db).await?)
+    }
+
+    // 8. Публичный метод с транзакцией
+    pub async fn complete_quest(
+        db: &DatabaseConnection,
+        user_id: &str,
+        quest_id: &str,
+        date: Date,
+    ) -> AppResult<user_quest_status::Model> {
+        let txn = db.begin().await?;
+        let res = Self::complete_quest_internal(&txn, user_id, quest_id, date).await?;
+        txn.commit().await?;
+        Ok(res)
     }
 }

@@ -1,5 +1,10 @@
+pub mod lobby_member_service;
+pub mod lobby_service;
+pub mod message_service;
+pub mod quest_proof_beliefs_service;
 pub mod quest_proof_service;
 pub mod quest_service;
 pub mod refresh_token_service;
+pub mod tests;
 pub mod user_quest_status_service;
 pub mod user_service;

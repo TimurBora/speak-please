@@ -10,6 +10,10 @@ pub struct Model {
     #[sea_orm(primary_key)]
     pub ulid: String,
 
+    pub lobby_id: Option<String>,
+    #[sea_orm(belongs_to, from = "lobby_id", to = "ulid")]
+    pub lobby: HasOne<super::lobbies::Entity>,
+
     pub title: String,
     pub description: Option<String>,
     pub complexity: Complexity,
@@ -28,6 +32,7 @@ impl ActiveModel {
         validation_type: &str,
         target_value: Option<u32>,
         complexity: Option<Complexity>,
+        lobby_id: Option<String>,
     ) -> Self {
         let xp_reward = xp_reward.unwrap_or(10);
         let target_value = target_value.unwrap_or(1);
@@ -40,6 +45,7 @@ impl ActiveModel {
             validation_type: Set(validation_type.to_string()),
             target_value: Set(target_value),
             complexity: Set(complexity),
+            lobby_id: Set(lobby_id),
         }
     }
 }
@@ -57,14 +63,16 @@ struct QuestSeed {
 }
 
 pub async fn seed_quests(db: &DatabaseConnection) -> Result<(), DbErr> {
-    // Читаем JSON
     let data = include_str!("../quests.json");
 
+    seed_quests_internal(db, data).await
+}
+
+pub async fn seed_quests_internal(db: &DatabaseConnection, data: &str) -> Result<(), DbErr> {
     let seeds: Vec<QuestSeed> = serde_json::from_str(data)
         .map_err(|e| DbErr::Custom(format!("JSON parse error: {}", e)))?;
 
     for seed in seeds {
-        // Проверяем, существует ли уже квест с таким заголовком
         let exists = Entity::find()
             .filter(Column::Title.eq(&seed.title))
             .one(db)
@@ -75,14 +83,12 @@ pub async fn seed_quests(db: &DatabaseConnection) -> Result<(), DbErr> {
             continue;
         }
 
-        // Определяем сложность
         let complexity = match seed.complexity.to_lowercase().as_str() {
             "medium" => Complexity::Medium,
             "hard" => Complexity::Hard,
             _ => Complexity::Easy,
         };
 
-        // Создаем модель без action_type
         let active_model = ActiveModel {
             ulid: Set(ulid::Ulid::new().to_string()),
             title: Set(seed.title.clone()),
@@ -91,6 +97,7 @@ pub async fn seed_quests(db: &DatabaseConnection) -> Result<(), DbErr> {
             xp_reward: Set(seed.xp_reward),
             validation_type: Set(seed.validation_type),
             target_value: Set(seed.target_value),
+            lobby_id: Set(None),
         };
 
         active_model.insert(db).await?;

@@ -11,7 +11,7 @@ use sea_orm::{DbErr, SqlErr};
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use thiserror::Error;
-use validator::ValidationError;
+use validator::{ValidationError, ValidationErrors};
 
 #[derive(Serialize, Debug, Error, Type)]
 pub enum AppError {
@@ -42,8 +42,11 @@ pub enum AppError {
     Validation(
         #[from]
         #[specta(skip)]
-        ValidationError,
+        ValidationErrors,
     ),
+
+    #[error("Custom error: {0}")]
+    Custom(String),
 
     #[error("Not found")]
     NotFound,
@@ -72,6 +75,7 @@ impl AppError {
                 ErrorCode::ValidationError,
                 e.to_string(),
             ),
+            Self::Custom(msg) => (StatusCode::BAD_REQUEST, ErrorCode::CustomError, msg.clone()),
             Self::NotFound => (
                 StatusCode::NOT_FOUND,
                 ErrorCode::NotFound,
@@ -109,6 +113,7 @@ impl From<ErrorBody> for AppError {
             ErrorCode::ValidationError => {
                 Self::Auth(AuthError::ValidationError(error_body.message))
             }
+            ErrorCode::CustomError => Self::Custom(error_body.message),
             ErrorCode::NotFound => Self::NotFound,
             ErrorCode::DatabaseError => Self::Database(sea_orm::DbErr::Custom(error_body.message)),
             ErrorCode::ServerError => Self::Server(error_body.message),
@@ -136,6 +141,14 @@ impl From<sea_orm::TransactionError<AppError>> for AppError {
             sea_orm::TransactionError::Connection(e) => AppError::Database(e),
             sea_orm::TransactionError::Transaction(e) => e,
         }
+    }
+}
+
+impl From<ValidationError> for AppError {
+    fn from(err: ValidationError) -> Self {
+        let mut errors = ValidationErrors::new();
+        errors.add("default", err);
+        Self::Validation(errors)
     }
 }
 
@@ -182,6 +195,7 @@ pub enum ErrorCode {
     NotFound,
     DatabaseError,
     ServerError,
+    CustomError,
 }
 
 pub type AppResult<T> = Result<T, AppError>;

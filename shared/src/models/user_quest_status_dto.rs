@@ -11,9 +11,6 @@ use sea_orm::prelude::StringLen;
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum QuestStatus {
     #[sea_orm(rename = "SCREAMING_SNAKE_CASE")]
-    NotStarted,
-
-    #[sea_orm(rename = "SCREAMING_SNAKE_CASE")]
     InProgress,
 
     #[sea_orm(rename = "SCREAMING_SNAKE_CASE")]

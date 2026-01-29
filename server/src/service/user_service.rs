@@ -6,13 +6,17 @@
 //    └── profile.rs       # Получение данных профиля, смена аватара, статуса
 // TODO: THINK ABOUT IT
 
+use sea_orm::Set;
 use sea_orm::entity::prelude::*;
 use shared::{
     errors::{AppError, AppResult, DbResultExt, auth_errors::AuthError},
     utils::hashing::{hash, verify_hash},
 };
 
-use crate::entities::{prelude::*, users};
+use crate::{
+    entities::{prelude::*, users},
+    file_storage::s3_client::S3Manager,
+};
 
 pub struct UserService;
 
@@ -99,5 +103,51 @@ impl UserService {
 
         tracing::info!(user.id = %user.ulid, "User authenticated successfully");
         Ok(user)
+    }
+
+    pub async fn update_profile(
+        db: &DatabaseConnection,
+        user_id: &str,
+        new_username: Option<String>,
+        new_bio: Option<String>,
+    ) -> AppResult<users::Model> {
+        let user = User::find_by_id(user_id)
+            .one(db)
+            .await?
+            .ok_or(AppError::NotFound)?;
+
+        let mut active_user: users::ActiveModel = user.into();
+
+        if let Some(username) = new_username {
+            active_user.username = Set(username);
+        }
+        if let Some(bio) = new_bio {
+            active_user.bio = Set(Some(bio));
+        }
+
+        Ok(active_user.update(db).await?)
+    }
+
+    pub async fn get_avatar_upload_url(user_id: &str, s3: &S3Manager) -> AppResult<String> {
+        let key = format!("users/{}/avatar.jpg", user_id);
+        s3.get_upload_url(&key, "image/jpeg", 3600)
+            .await
+            .map_err(|e| AppError::Custom(e.to_string()))
+    }
+
+    pub async fn confirm_avatar_update(
+        db: &DatabaseConnection,
+        user_id: &str,
+    ) -> AppResult<users::Model> {
+        let key = format!("users/{}/avatar.jpg", user_id);
+
+        let mut user: users::ActiveModel = User::find_by_id(user_id)
+            .one(db)
+            .await?
+            .ok_or(AppError::NotFound)?
+            .into();
+
+        user.avatar_url = Set(Some(key));
+        Ok(user.update(db).await?)
     }
 }

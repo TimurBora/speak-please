@@ -2,15 +2,21 @@ use aws_config::Region;
 use axum::Router;
 use migration::{Migrator, MigratorTrait};
 use sea_orm::{ConnectOptions, Database, DatabaseConnection};
-use std::{env, net::SocketAddr};
-use tokio::net::TcpListener;
+use shared::models::message_dto::LobbyEvent;
+use std::{collections::HashMap, env, net::SocketAddr, sync::Arc};
+use tokio::{
+    net::TcpListener,
+    sync::{Mutex, broadcast},
+};
 use tower_http::trace::{DefaultMakeSpan, DefaultOnResponse, TraceLayer};
 use tracing::Level;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::{
     entities::quests::seed_quests,
+    file_storage::s3_client::S3Manager,
     routes::{
+        lobby_routes::lobby_router, quest_proof_routes::quest_proof_router,
         refresh_token_routes::refresh_token_router, user_quest_status_routes::user_quest_router,
         user_routes::public_user_router,
     },
@@ -25,27 +31,14 @@ pub mod service;
 #[derive(Clone)]
 pub struct AppState {
     pub connection: DatabaseConnection,
+    pub s3_manager: S3Manager,
+    pub lobby_channels: Arc<Mutex<HashMap<String, broadcast::Sender<LobbyEvent>>>>, // TODO:
+                                                                                    // Implement chat
 }
 
 #[tokio::main]
 async fn main() -> Result<(), ()> {
     dotenv::dotenv().ok();
-
-    let region = Region::new(env::var("AWS_REGION").unwrap());
-    let endpoint_url = env::var("AWS_ENDPOINT").unwrap();
-    let sdk_config = aws_config::from_env().region(region).load().await;
-    let s3_config = aws_sdk_s3::config::Builder::from(&sdk_config)
-        .endpoint_url(endpoint_url)
-        .force_path_style(true)
-        .build();
-    let client = aws_sdk_s3::Client::from_conf(s3_config);
-
-    // List buckets and print their names
-    let resp = client.list_buckets().send().await.unwrap();
-    for bucket in resp.buckets() {
-        println!("Bucket: {}", bucket.name().unwrap_or_default());
-    }
-
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -58,34 +51,52 @@ async fn main() -> Result<(), ()> {
                 .with_target(false)
                 .with_file(false)
                 .with_line_number(false),
-        ) // Делает вывод многострочным и понятным
+        )
         .init();
 
+    // This isn't the best practice for DB creation
     let db_url = "sqlite://../database.db?mode=rwc";
     let mut opt = ConnectOptions::new(db_url);
     opt.sqlx_logging(false);
-    let connection = Database::connect(opt)
-        .await
-        .expect("Не удалось подключиться к БД");
+    let connection = Database::connect(opt).await.expect("Cannot connect to DB");
 
     Migrator::up(&connection, None)
         .await
         .expect("Migration failed");
 
+    // Creating default quests for testing and other stuff
     seed_quests(&connection).await.unwrap();
-    let state = AppState { connection };
 
+    let region = Region::new(env::var("AWS_REGION").unwrap());
+    let endpoint_url = env::var("AWS_ENDPOINT").unwrap();
+    let s3_manager =
+        S3Manager::new("speak-please".to_string(), endpoint_url, region.to_string()).await;
+
+    let lobby_channels = Arc::new(Mutex::new(HashMap::new()));
+    let state = AppState {
+        connection,
+        s3_manager,
+        lobby_channels,
+    };
+
+    // Public routes don't needs access keys
     let public_routes = Router::new()
         .merge(refresh_token_router())
-        .merge(public_user_router())
-        .merge(user_quest_router());
+        .merge(public_user_router());
 
-    //   let protected_routes = Router::new().layer(axum::middleware::from_fn(
-    //middleware::jwt_verify_middleware::check_access_token,
-    //));
+    // Private/Protected routes do needs access keys
+    let protected_routes: Router<AppState> = Router::new()
+        .merge(user_quest_router())
+        .merge(quest_proof_router())
+        .merge(lobby_router())
+        .layer(axum::middleware::from_fn(
+            middleware::jwt_verify_middleware::check_access_token, // Middleware for access key
+                                                                   // checking
+        ));
 
     let app = Router::new()
         .merge(public_routes)
+        .merge(protected_routes)
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(
@@ -99,7 +110,6 @@ async fn main() -> Result<(), ()> {
                         .latency_unit(tower_http::LatencyUnit::Millis),
                 ),
         )
-        //        .merge(protected_routes)
         .with_state(state);
 
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));

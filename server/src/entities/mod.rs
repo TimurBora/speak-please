@@ -3,6 +3,9 @@ pub mod arena_participants;
 pub mod arena_votes;
 pub mod journal_entries;
 pub mod lobbies;
+pub mod lobbies_members;
+pub mod messages;
+pub mod quest_proof_beliefs;
 pub mod quest_proofs;
 pub mod quests;
 pub mod refresh_tokens;
@@ -15,6 +18,11 @@ pub mod user_skills;
 pub mod users;
 
 pub mod prelude {
+    pub use super::lobbies::Entity as Lobby;
+    pub use super::lobbies_members::Entity as LobbyMembers;
+    pub use super::messages::Entity as Message;
+    pub use super::quest_proof_beliefs::Entity as QuestProofBeliefs;
+    pub use super::quest_proofs::Entity as QuestProof;
     pub use super::quests::Entity as Quest;
     pub use super::refresh_tokens::Entity as RefreshToken;
     pub use super::user_quest_status::Entity as UserQuestStatus;

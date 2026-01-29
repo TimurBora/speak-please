@@ -1,12 +1,9 @@
-use crate::endpoints::API;
-
-pub struct UserUlid(String);
-pub struct QuestUlid(String);
+use crate::endpoints::{API, QuestUlid, UserUlid};
 
 pub enum UserQuestEndpoints {
-    GetJournal(String),            // user_ulid
-    GetDailyQuests(String),        // user_ulid
-    CompleteQuest(String, String), // user_ulid, quest_id
+    GetJournal(UserUlid),               // user_ulid
+    GetDailyQuests(UserUlid),           // user_ulid
+    CompleteQuest(UserUlid, QuestUlid), // user_ulid, quest_id
 }
 
 impl API for UserQuestEndpoints {

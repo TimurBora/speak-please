@@ -48,6 +48,8 @@ async fn register(
         email: user_model.email,
         created_at: user_model.created_at,
         refresh_token,
+        level: user_model.level,
+        avatar_url: user_model.avatar_url,
     };
 
     Ok(Json(response))
@@ -78,6 +80,8 @@ async fn login(
         username: user_model.username,
         email: user_model.email,
         refresh_token,
+        level: user_model.level,
+        avatar_url: user_model.avatar_url,
     };
 
     Ok(Json(response))

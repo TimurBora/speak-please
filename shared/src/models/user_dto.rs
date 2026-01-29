@@ -26,6 +26,8 @@ pub struct RegisterResponse {
     pub email: String,
     pub created_at: chrono::DateTime<chrono::Utc>,
     pub refresh_token: String,
+    pub level: u32,
+    pub avatar_url: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Validate, Type)]
@@ -41,4 +43,6 @@ pub struct LoginResponse {
     pub username: String,
     pub email: String,
     pub refresh_token: String,
+    pub level: u32,
+    pub avatar_url: Option<String>,
 }

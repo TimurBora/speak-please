@@ -18,18 +18,21 @@ pub struct Model {
     pub quest: HasOne<super::quests::Entity>,
 
     #[sea_orm(column_type = "Text")]
-    pub proof_text: String,
+    pub proof_text: Option<String>,
     pub photos: Option<Json>,
     pub voice_notes: Option<Json>,
 
     pub status: ProofStatus,
-    pub votes_count: i32,
+    pub beliefs_count: u32,
     pub created_at: DateTimeUtc,
+    pub updated_at: DateTimeUtc,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, EnumIter, DeriveActiveEnum, Serialize, Deserialize, Type)]
 #[sea_orm(rs_type = "String", db_type = "String(StringLen::N(10))")]
 pub enum ProofStatus {
+    #[sea_orm(string_value = "uploading")]
+    Uploading,
     #[sea_orm(string_value = "pending")]
     Pending,
     #[sea_orm(string_value = "approved")]

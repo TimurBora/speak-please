@@ -19,7 +19,7 @@ pub struct Model {
 
     #[sea_orm(belongs_to, from = "quest_id", to = "ulid")]
     #[serde(skip)]
-    pub daily_quest: Option<super::quests::Entity>,
+    pub quest: Option<super::quests::Entity>,
 
     pub is_completed: bool,
     pub current_value: u32,
@@ -39,7 +39,7 @@ impl ActiveModel {
             updated_at: Set(chrono::Utc::now()),
             assigned_at: Set(date),
             current_value: Set(0),
-            quest_status: Set(QuestStatus::NotStarted),
+            quest_status: Set(QuestStatus::InProgress),
         }
     }
 }

@@ -13,12 +13,17 @@ sea-orm = { version = "2.0.0-rc.22", features = [
   "runtime-tokio-rustls",
   "macros",
   "debug-print",
+  "mock",
 ] }
 tokio = { version = "1.47.2", features = ["full"] }
+futures-util = { version = "0.3", default-features = false, features = [
+  "sink",
+] }
 argon2 = { version = "0.6.0-rc.5", features = ["getrandom"] }
 password-hash = { version = "0.6.0-rc.6", features = ["rand_core"] }
-axum = "0.8.8"
+axum = { version = "0.8.8", features = ["ws"] }
 axum-extra = { version = "0.12.3", features = ["typed-header"] }
+axum-test = "18.7.0"
 jwt-simple = "0.12.13"
 dotenv = "0.15.0"
 ulid = "1.2.1"

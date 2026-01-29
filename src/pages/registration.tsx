@@ -65,13 +65,11 @@ const Register: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#0d0018] relative overflow-hidden flex items-center justify-center p-4 font-sans text-slate-200">
 
-      {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-[70%] h-[50%] bg-purple-900/15 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[40%] bg-indigo-900/10 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="relative z-10 w-full max-w-md bg-[#1a0029]/60 backdrop-blur-2xl border border-white/10 rounded-[32px] p-8 shadow-2xl">
 
-        {/* Header */}
         <div className="mb-8 text-center">
           <div className="inline-flex items-center justify-center w-14 h-14 bg-purple-600/10 rounded-2xl border border-purple-500/20 mb-4">
             <UserPlus className="w-7 h-7 text-purple-400" />
@@ -80,7 +78,6 @@ const Register: React.FC = () => {
           <p className="text-slate-500 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Initialize account creation</p>
         </div>
 
-        {/* --- Error Block --- */}
         {error && (
           <div className="mb-6 overflow-hidden animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4">
@@ -109,7 +106,6 @@ const Register: React.FC = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Username */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 ml-1 uppercase tracking-widest">Public Alias</label>
             <div className="relative group">
@@ -127,7 +123,6 @@ const Register: React.FC = () => {
             </div>
           </div>
 
-          {/* Email */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 ml-1 uppercase tracking-widest">Data Link (Email)</label>
             <div className="relative group">
@@ -145,7 +140,6 @@ const Register: React.FC = () => {
             </div>
           </div>
 
-          {/* Password */}
           <div className="space-y-1.5">
             <label className="text-[10px] font-black text-slate-500 ml-1 uppercase tracking-widest">Access Key</label>
             <div className="relative group">

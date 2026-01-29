@@ -16,6 +16,16 @@ pub enum Complexity {
     Hard,
 }
 
+impl Complexity {
+    pub fn required_beliefs(&self, user_level: u32) -> u32 {
+        match self {
+            Self::Easy => 2 + (user_level / 10),
+            Self::Medium => 5 + (user_level / 5),
+            Self::Hard => 10 + (user_level / 3),
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Type)]
 pub struct QuestDto {
     pub ulid: String,

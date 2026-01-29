@@ -1,0 +1,18 @@
+[
+  {
+    "title": "Mirror Talk",
+    "description": "Look into your eyes in the mirror...",
+    "complexity": "Easy",
+    "xp_reward": 15,
+    "validation_type": "AUTOMATIC",
+    "target_value": 1
+  },
+  {
+    "title": "The 'No' Power",
+    "description": "Set a boundary...",
+    "complexity": "Hard",
+    "xp_reward": 120,
+    "validation_type": "COMMUNITY",
+    "target_value": 1
+  }
+]

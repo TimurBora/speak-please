@@ -4,6 +4,9 @@ import Home from './pages/home';
 import { useEffect, ReactNode } from 'react';
 import { useAuthStore } from './stores/authStore';
 import Login from './pages/login';
+import Feed from './pages/feed';
+import Archive from './pages/archive';
+import Lobbies from './pages/lobby_feed';
 
 const AuthGuard = ({ children, requireAuth }: { children: ReactNode, requireAuth: boolean }) => {
   const { checkSession, isAuthenticated, isLoading } = useAuthStore();
@@ -55,6 +58,33 @@ function App() {
           element={
             <AuthGuard requireAuth={true}>
               <Home />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/feed"
+          element={
+            <AuthGuard requireAuth={true}>
+              <Feed />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/profile"
+          element={
+            <AuthGuard requireAuth={true}>
+              <Archive />
+            </AuthGuard>
+          }
+        />
+
+        <Route
+          path="/lobby"
+          element={
+            <AuthGuard requireAuth={true}>
+              <Lobbies></Lobbies>
             </AuthGuard>
           }
         />
