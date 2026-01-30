@@ -1,5 +1,7 @@
 # Speak Please
 
+[![Download PPTX]](speak-please.pptx?raw=true)
+
 This is my project for `RAF Challenge` and `Neumann informatikaverseny` competitions.
 
 ### Project description
