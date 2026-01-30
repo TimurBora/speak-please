@@ -9,7 +9,8 @@ pub struct CustomClaims {
 }
 
 fn jwt_key() -> HS256Key {
-    let jwt_secret_key = std::env::var("JWT_SECRET_KEY").expect("JWT secret key must be provided");
+    dotenv::dotenv().ok();
+    let jwt_secret_key = env!("JWT_SECRET_KEY");
     HS256Key::from_bytes(jwt_secret_key.as_bytes())
 }
 

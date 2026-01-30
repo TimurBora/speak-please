@@ -4,8 +4,7 @@ use argon2::{
 };
 
 pub fn hash(text: &str) -> Result<String, argon2::password_hash::Error> {
-    let refresh_token_salt: String =
-        std::env::var("REFRESH_TOKEN_SALT").expect("Refresh token salt must be provided");
+    let refresh_token_salt = env!("REFRESH_TOKEN_SALT");
     let argon2 = Argon2::default();
     let password_hash = argon2
         .hash_password_with_salt(text.as_bytes(), refresh_token_salt.as_bytes())?
