@@ -1,7 +1,5 @@
 use jwt_simple::prelude::*;
 
-use dotenvy_macro::dotenv;
-
 use crate::errors::jwt_errors::JwtError;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -10,10 +8,9 @@ pub struct CustomClaims {
     pub email: String,
 }
 
-const JWT_SECRET_KEY: &str = dotenv!("JWT_SECRET_KEY");
-
 fn jwt_key() -> HS256Key {
-    HS256Key::from_bytes(JWT_SECRET_KEY.as_bytes())
+    let jwt_secret_key = std::env::var("JWT_SECRET_KEY").expect("JWT secret key must be provided");
+    HS256Key::from_bytes(jwt_secret_key.as_bytes())
 }
 
 pub fn create_access_token(user_id: String, email: String) -> Result<String, JwtError> {

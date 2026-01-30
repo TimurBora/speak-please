@@ -2,14 +2,13 @@ use argon2::{
     Argon2,
     password_hash::{PasswordHasher, PasswordVerifier, phc::PasswordHash},
 };
-use dotenvy_macro::dotenv;
-
-const REFRESH_TOKEN_SALT: &str = dotenv!("REFRESH_TOKEN_SALT");
 
 pub fn hash(text: &str) -> Result<String, argon2::password_hash::Error> {
+    let refresh_token_salt: String =
+        std::env::var("REFRESH_TOKEN_SALT").expect("Refresh token salt must be provided");
     let argon2 = Argon2::default();
     let password_hash = argon2
-        .hash_password_with_salt(text.as_bytes(), REFRESH_TOKEN_SALT.as_bytes())?
+        .hash_password_with_salt(text.as_bytes(), refresh_token_salt.as_bytes())?
         .to_string();
 
     Ok(password_hash)
