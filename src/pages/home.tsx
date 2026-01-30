@@ -23,7 +23,6 @@ const Home: React.FC = () => {
 
   return (
     <Layout title={username} isOverlayActive={isUIOverlayActive}>
-      {/* Секция заголовка */}
       <div className="mb-6 flex justify-between items-end px-1">
         <div className="flex flex-col gap-1">
           <h2 className="text-[10px] uppercase tracking-[0.3em] text-purple-500 font-black">
@@ -56,7 +55,7 @@ const Home: React.FC = () => {
           title: activeTask.quest.title,
           points: activeTask.quest.xp_reward,
           status: activeTask.status.toLowerCase()
-        } as QuestDto) : null}
+        } as any) : null}
         isOpen={!!selectedTaskId}
         onClose={() => setSelectedTaskId(null)}
         onSubmit={() => setSelectedTaskId(null)}

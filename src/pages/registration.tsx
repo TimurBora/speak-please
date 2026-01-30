@@ -10,7 +10,8 @@ const UI_MESSAGES: Record<ErrorCode, string> = {
   VALIDATION_ERROR: "Registration data is invalid. Check details below.",
   NOT_FOUND: "System core: Resource not located.",
   DATABASE_ERROR: "Storage failure. Data link interrupted.",
-  SERVER_ERROR: "Neural link error. Server is unresponsive."
+  SERVER_ERROR: "Neural link error. Server is unresponsive.",
+  CUSTOM_ERROR: "CUSTOM ERROR",
 };
 
 const Register: React.FC = () => {

@@ -22,7 +22,9 @@ const useAudioRecorder = () => {
 
       if ('permissions' in navigator) {
         try {
-          const status = await navigator.permissions.query({ name: 'microphone' });
+          const status = await navigator.permissions.query({
+            name: 'microphone' as PermissionName
+          });
           if (status.state === 'denied') {
             setPermissionError('Microphone access denied by system');
             return false;

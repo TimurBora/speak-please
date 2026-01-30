@@ -4,14 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Sparkles, ShieldCheck, Mail, Lock, AlertTriangle, Info } from 'lucide-react';
 
-// Улучшенные сообщения с иконками или более понятным языком
 const UI_MESSAGES: Record<ErrorCode, string> = {
   AUTH_INVALID: "Invalid credentials. Double-check your email and password.",
   USER_EXISTS: "Identity already exists in the database.",
   VALIDATION_ERROR: "Input verification failed. See details below.",
   NOT_FOUND: "System core: Resource not located.",
   DATABASE_ERROR: "Storage failure. Data link interrupted.",
-  SERVER_ERROR: "Neural link error. Server is unresponsive."
+  SERVER_ERROR: "Neural link error. Server is unresponsive.",
+  CUSTOM_ERROR: "CUSTOM ERROR",
 };
 
 const Login: React.FC = () => {
