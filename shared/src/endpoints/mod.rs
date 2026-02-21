@@ -1,16 +1,16 @@
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
-#[derive(Default, Debug, Serialize, Deserialize, Type)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, Type)]
 pub struct UserUlid(pub String);
 
-#[derive(Default, Debug, Serialize, Deserialize, Type)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, Type)]
 pub struct QuestProofUlid(pub String);
 
-#[derive(Default, Debug, Serialize, Deserialize, Type)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, Type)]
 pub struct QuestUlid(pub String);
 
-#[derive(Default, Debug, Serialize, Deserialize, Type)]
+#[derive(Default, Debug, Serialize, Deserialize, Clone, Type)]
 pub struct LobbyUlid(pub String);
 
 macro_rules! impl_ulid_wrapper {
@@ -46,6 +46,7 @@ pub trait API {
 }
 
 pub mod lobby_endpoints;
+pub mod message_endpoints;
 pub mod quest_proof_endpoints;
 pub mod refresh_token_endpoints;
 pub mod user_endpoints;

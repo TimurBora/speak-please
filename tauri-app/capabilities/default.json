@@ -10,6 +10,21 @@
     "opener:default",
     "store:default",
     "log:default",
-    "core:webview:default"
+    "core:webview:default",
+    "core:event:default",
+    "mic-recorder:default",
+    "fs:default",
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        "$HOME/.local/share/com.speakplease.app/**"
+      ]
+    },
+    {
+      "identifier": "fs:allow-exists",
+      "allow": [
+        "$HOME/.local/share/com.speakplease.app/**"
+      ]
+    }
   ]
 }

@@ -3,95 +3,59 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mic, Square, Trash2, Play, ShieldCheck, Plus, Sparkles, AlertTriangle } from 'lucide-react';
 import { useTaskStore } from '../stores/taskStore';
 import { QuestDto } from '../bindings';
+import { startRecording, stopRecording } from "tauri-plugin-mic-recorder-api";
+import { convertFileSrc } from '@tauri-apps/api/core';
+import { readFile } from '@tauri-apps/plugin-fs';
 
-const useAudioRecorder = () => {
+const useTauriAudioRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [audioResult, setAudioResult] = useState<{ blob: Blob; url: string } | null>(null);
+  const [audioResult, setAudioResult] = useState<{ url: string; uint8Array: Uint8Array } | null>(null);
   const [permissionError, setPermissionError] = useState<string | null>(null);
-
-  const mediaRecorder = useRef<MediaRecorder | null>(null);
   const timerInterval = useRef<number | null>(null);
 
-  const requestPermission = async (): Promise<boolean> => {
-    try {
-      if (!navigator.mediaDevices?.getUserMedia) {
-        setPermissionError('Media devices API not available');
-        return false;
-      }
-
-      if ('permissions' in navigator) {
-        try {
-          const status = await navigator.permissions.query({
-            name: 'microphone' as PermissionName
-          });
-          if (status.state === 'denied') {
-            setPermissionError('Microphone access denied by system');
-            return false;
-          }
-        } catch {
-        }
-      }
-
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach(t => t.stop());
-      setPermissionError(null);
-      return true;
-    } catch (err) {
-      console.error('[Audio] Permission request failed', err);
-      setPermissionError('Microphone permission denied');
-      return false;
-    }
-  };
-
   const start = async () => {
-    const allowed = await requestPermission();
-    if (!allowed) return;
-
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      const chunks: BlobPart[] = [];
-
-      recorder.ondataavailable = (e) => chunks.push(e.data);
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/ogg; codecs=opus' });
-        const url = URL.createObjectURL(blob);
-        setAudioResult({ blob, url });
-      };
-
-      recorder.start();
-      mediaRecorder.current = recorder;
+      await startRecording();
       setIsRecording(true);
       setRecordingTime(0);
+      setAudioResult(null);
 
       timerInterval.current = window.setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
     } catch (err) {
-      console.error('[Audio] Failed to start recording', err);
-      setPermissionError('Failed to access microphone');
+      console.error('[Audio] Start error:', err);
+      setPermissionError('Microphone access failed');
     }
   };
 
-  const stop = () => {
-    mediaRecorder.current?.stop();
-    mediaRecorder.current?.stream.getTracks().forEach(t => t.stop());
-    if (timerInterval.current) clearInterval(timerInterval.current);
-    setIsRecording(false);
+  const stop = async () => {
+    try {
+      const filePath = await stopRecording();
+      if (timerInterval.current) clearInterval(timerInterval.current);
+      setIsRecording(false);
+      console.log("РЕАЛЬНЫЙ ПУТЬ К ФАЙЛУ:", filePath);
+
+      if (filePath) {
+        const uint8Array = await readFile(filePath);
+
+        const assetUrl = convertFileSrc(filePath);
+
+        setAudioResult({
+          url: assetUrl,
+          uint8Array
+        });
+      }
+    } catch (err) {
+      console.error('[Audio] Stop error:', err);
+      setIsRecording(false);
+    }
   };
 
   const clear = () => setAudioResult(null);
 
-  return {
-    isRecording,
-    recordingTime,
-    audioResult,
-    permissionError,
-    start,
-    stop,
-    clear
-  };
+  return { isRecording, recordingTime, audioResult, permissionError, start, stop, clear };
 };
 
 const fileToUint8Array = async (file: File | Blob): Promise<Uint8Array> => {
@@ -100,7 +64,7 @@ const fileToUint8Array = async (file: File | Blob): Promise<Uint8Array> => {
 };
 
 interface ProofSheetProps {
-  task: QuestDto | null,
+  task: QuestDto | null;
   isOpen: boolean;
   onClose: () => void;
   onSubmit: () => void;
@@ -109,7 +73,7 @@ interface ProofSheetProps {
 const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit }) => {
   const [text, setText] = useState('');
   const [images, setImages] = useState<{ file: File; preview: string }[]>([]);
-  const [audioNotes, setAudioNotes] = useState<{ blob: Blob; url: string }[]>([]);
+  const [audioNotes, setAudioNotes] = useState<{ url: string; data: Uint8Array }[]>([]);
 
   const { submitProof, isLoading: isSubmitting, error } = useTaskStore();
 
@@ -117,14 +81,14 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
     isRecording,
     recordingTime,
     audioResult,
-    start: startRecording,
-    stop: stopRecording,
+    start: startTauriRecording,
+    stop: stopTauriRecording,
     clear: clearCurrentAudio
-  } = useAudioRecorder();
+  } = useTauriAudioRecorder();
 
   useEffect(() => {
     if (audioResult) {
-      setAudioNotes(prev => [...prev, audioResult]);
+      setAudioNotes(prev => [...prev, { url: audioResult.url, data: audioResult.uint8Array }]);
       clearCurrentAudio();
     }
   }, [audioResult, clearCurrentAudio]);
@@ -132,9 +96,8 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
   useEffect(() => {
     return () => {
       images.forEach(img => URL.revokeObjectURL(img.preview));
-      audioNotes.forEach(audio => URL.revokeObjectURL(audio.url));
     };
-  }, [images, audioNotes]);
+  }, [images]);
 
   if (!task) return null;
 
@@ -153,14 +116,12 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
   };
 
   const removeAudio = (index: number) => {
-    URL.revokeObjectURL(audioNotes[index].url);
     setAudioNotes(prev => prev.filter((_, i) => i !== index));
   };
 
   const resetLocalState = () => {
     setText('');
     images.forEach(img => URL.revokeObjectURL(img.preview));
-    audioNotes.forEach(audio => URL.revokeObjectURL(audio.url));
     setImages([]);
     setAudioNotes([]);
   };
@@ -175,7 +136,7 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
     if (!task) return;
 
     const photoBytes = await Promise.all(images.map(img => fileToUint8Array(img.file)));
-    const voiceBytes = await Promise.all(audioNotes.map(a => fileToUint8Array(a.blob)));
+    const voiceBytes = audioNotes.map(a => a.data);
 
     const payload = {
       proof_text: text.trim() || null,
@@ -275,7 +236,13 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
                   <div className="space-y-3">
                     {audioNotes.map((audio, idx) => (
                       <motion.div key={audio.url} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-3 bg-purple-950/20 p-2 rounded-xl border border-white/5">
-                        <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400">
+                        <div
+                          className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 cursor-pointer"
+                          onClick={() => {
+                            const player = new Audio(audio.url);
+                            player.play();
+                          }}
+                        >
                           <Play size={14} fill="currentColor" />
                         </div>
                         <span className="text-[9px] font-mono text-slate-500 truncate flex-1">LOG_{idx + 1}</span>
@@ -286,7 +253,7 @@ const ProofSheet: React.FC<ProofSheetProps> = ({ task, isOpen, onClose, onSubmit
                     ))}
 
                     <button
-                      onClick={isRecording ? stopRecording : startRecording}
+                      onClick={isRecording ? stopTauriRecording : startTauriRecording}
                       className={`w-full h-24 rounded-2xl border-2 border-dashed flex flex-col items-center justify-center gap-2 transition-all ${isRecording
                         ? 'bg-red-500/10 border-red-500 text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.2)]'
                         : 'bg-purple-950/10 border-purple-500/20 text-purple-400/50 hover:border-purple-500/40'

@@ -14,6 +14,100 @@ import {
 import Layout from '../components/Layout';
 import { commands, ProofDetailsResponse } from '../bindings';
 
+const CyberAudioPlayer: React.FC<{ src: string }> = ({ src }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = React.useRef<HTMLAudioElement>(null);
+
+  const formatTime = (time: number) => {
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const onLoadedMetadata = () => {
+    if (audioRef.current) setDuration(audioRef.current.duration);
+  };
+
+  const onTimeUpdate = () => {
+    if (audioRef.current) setCurrentTime(audioRef.current.currentTime);
+  };
+
+  const togglePlay = () => {
+    if (isPlaying) audioRef.current?.pause();
+    else audioRef.current?.play();
+    setIsPlaying(!isPlaying);
+  };
+
+  const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = Number(e.target.value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+      setCurrentTime(time);
+    }
+  };
+
+  return (
+    <div className="mt-10 p-5 bg-[#1a0b2e]/60 border border-purple-500/20 rounded-[2rem] backdrop-blur-xl relative overflow-hidden group transition-all hover:border-purple-500/40">
+      <audio
+        ref={audioRef}
+        src={src}
+        onLoadedMetadata={onLoadedMetadata}
+        onTimeUpdate={onTimeUpdate}
+        onEnded={() => setIsPlaying(false)}
+        className="hidden"
+      />
+
+      <div className="relative flex items-center gap-5">
+        <button
+          onClick={togglePlay}
+          className="w-16 h-16 flex-shrink-0 flex items-center justify-center rounded-2xl bg-purple-600 text-white shadow-[0_0_30px_rgba(168,85,247,0.3)] hover:scale-105 active:scale-95 transition-all"
+        >
+          {isPlaying ? (
+            <div className="flex gap-1.5">
+              <div className="w-1.5 h-5 bg-white rounded-full animate-[bounce_1s_infinite_0.1s]" />
+              <div className="w-1.5 h-5 bg-white rounded-full animate-[bounce_1s_infinite_0.3s]" />
+              <div className="w-1.5 h-5 bg-white rounded-full animate-[bounce_1s_infinite_0.2s]" />
+            </div>
+          ) : (
+            <div className="ml-1 w-0 h-0 border-y-[10px] border-y-transparent border-l-[16px] border-l-white rounded-sm" />
+          )}
+        </button>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-end mb-3">
+            <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-400 italic">Voice Evidence</p>
+              <p className="text-xs font-bold text-slate-300 mt-0.5">
+                {isPlaying ? 'System Playing...' : 'Ready to Decode'}
+              </p>
+            </div>
+            <div className="text-[10px] font-mono text-purple-400 bg-purple-500/10 px-2 py-0.5 rounded-md border border-purple-500/20">
+              {formatTime(currentTime)} / {formatTime(duration)}
+            </div>
+          </div>
+
+          <div className="relative h-2 w-full bg-white/5 rounded-full overflow-hidden">
+            <div
+              className="absolute top-0 left-0 h-full bg-gradient-to-r from-purple-600 to-fuchsia-500 shadow-[0_0_15px_rgba(168,85,247,0.8)] transition-all duration-100"
+              style={{ width: `${(currentTime / duration) * 100}%` }}
+            />
+            <input
+              type="range"
+              min="0"
+              max={duration || 0}
+              value={currentTime}
+              onChange={handleSeek}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+            />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BelieveButton: React.FC<{
   proofUlid: string;
   isBelieved: boolean;
@@ -138,8 +232,9 @@ const ProofDetailView: React.FC<{
         </div>
 
         {proof.proof_text && <p className="mt-12 text-2xl font-medium text-slate-200 italic">“{proof.proof_text}”</p>}
-        {proof.voice_urls && (
-          <div className="mt-10"><audio controls className="w-full rounded-xl bg-black/40" src={proof.voice_urls[0]} /></div>
+
+        {proof.voice_urls && proof.voice_urls[0] && (
+          <CyberAudioPlayer src={proof.voice_urls[0]} />
         )}
 
         <div className="grid grid-cols-1 gap-6 mt-12">
